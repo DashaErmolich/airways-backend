@@ -12,8 +12,8 @@ import { FlightsModule } from './flights/flights.module';
     ConfigModule.forRoot({
       envFilePath: './.env',
     }),
-    TypeOrmModule.forRoot(databaseOptions()),
-    AuthModule,
+    // TypeOrmModule.forRoot(databaseOptions()),
+    // AuthModule,
     FlightsModule,
   ],
   controllers: [AppController],

@@ -108,7 +108,7 @@ export class FlightsService {
   }
 
   getDateWithTime(date: string, timeMins: number): string[] {
-    const dateMs = new Date(new Date(date).toJSON().substring(0, 10)).getTime();
+    const dateMs = new Date(date).getTime();
     const hours = getRandomInt(0, 24) * 60 * 60 * 1000;
     const minutes = getRandomInt(0, 60) * 60 * 1000;
     const timeMinsInMs = timeMins * 60 * 1000;

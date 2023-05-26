@@ -17,6 +17,7 @@ export class FlightsService {
   searchFlight(searchFlights: SearchFlights) {
     const flights: Flight[] = [];
     const timeMins = getRandomInt(40, 420);
+    const layoverTime = getRandomInt(30, 90);
 
     const forwardFlight = this.generateFlight(
       searchFlights.fromKey,
@@ -36,15 +37,14 @@ export class FlightsService {
       flights.push(backFlight);
     }
 
-    flights[0].otherFlights = this.generateOtherFlights(
+    flights[0].connectedFlights = this.generateConnectedFlights(
       flights[0],
-      new Date(),
-      searchFlights.backDate
-        ? new Date(flights[1].takeoffDate)
-        : new Date('May 02 2053'),
-      new Date(searchFlights.forwardDate),
-      timeMins,
+      layoverTime,
     );
+
+    flights[0].connectedFlights.length
+      ? (flights[0].layoverTime = layoverTime)
+      : (flights[0].layoverTime = 0);
 
     if (flights[1]) {
       flights[1].otherFlights = this.generateOtherFlights(
@@ -68,7 +68,6 @@ export class FlightsService {
   ): Flight {
     const from = airports.find((item) => item.key == fromKey) as Airport;
     const to = airports.find((item) => item.key == toKey) as Airport;
-    const [takeoffDate, landingDate] = this.getDateWithTime(date, timeMins);
 
     const flight = new Flight();
     flight.seats = new Seats();
@@ -76,11 +75,14 @@ export class FlightsService {
     flight.seats.avaible = getRandomInt(9, flight.seats.total);
     flight.flightNumber = `${getRandomChars(2)}-${getRandomInt(10, 9999)}`;
     flight.timeMins = timeMins + getRandomInt(-5, 6);
+    const [takeoffDate, landingDate] = this.getDateWithTime(
+      date,
+      flight.timeMins,
+    );
     flight.form = from;
     flight.to = to;
     flight.takeoffDate = takeoffDate;
     flight.landingDate = landingDate;
-    // flight.prices = new PriceList();
 
     flight.price = approximatePrice
       ? new Price(
@@ -90,19 +92,6 @@ export class FlightsService {
           ),
         )
       : new Price(getRandomInt(40, 900));
-
-    // const takeoffDateMs = new Date(date).getTime();
-    // const currentDateMs = new Date().getTime();
-
-    // if (takeoffDateMs - currentDateMs < 0) {
-    //   flight.prices['-1'] = undefined;
-    // }
-
-    // if (takeoffDateMs - currentDateMs - 24 * 60 * 60 * 1000 < 0) {
-    //   flight.prices['-2'] = undefined;
-    // }
-
-    // flight.price = flight.prices[0];
 
     return flight;
   }
@@ -175,5 +164,57 @@ export class FlightsService {
     }
 
     return flights;
+  }
+
+  generateConnectedFlights(flight: Flight, stopTime: number): Flight[] {
+    const flights: Flight[] = [];
+
+    const stop = this.getConnectedAirport(flight);
+
+    if (flight.timeMins > 240) {
+      const one: Flight = this.generateFlight(
+        flight.form.key,
+        stop.key,
+        flight.takeoffDate,
+        flight.timeMins,
+      );
+
+      one.takeoffDate = flight.takeoffDate;
+      one.timeMins = getRandomInt(40, flight.timeMins * 0.6);
+      one.landingDate = this.addMinutesToDate(one.takeoffDate, one.timeMins);
+
+      flights.push(one);
+
+      const two: Flight = this.generateFlight(
+        stop.key,
+        flight.to.key,
+        flight.takeoffDate,
+        flight.timeMins,
+      );
+
+      two.takeoffDate = this.addMinutesToDate(one.landingDate, stopTime);
+      two.timeMins = flight.timeMins - one.timeMins - stopTime;
+      two.landingDate = this.addMinutesToDate(two.takeoffDate, two.timeMins);
+
+      flights.push(two);
+    }
+
+    return flights;
+  }
+
+  getConnectedAirport(flight: Flight) {
+    const availableAirports = airportsMain.filter(
+      (item) => item.key !== flight.form.key && item.key !== flight.to.key,
+    );
+    const shuffled = availableAirports
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value);
+
+    return shuffled[0];
+  }
+
+  addMinutesToDate(date: string, time: number) {
+    return new Date(new Date(date).getTime() + time * 60000).toJSON();
   }
 }

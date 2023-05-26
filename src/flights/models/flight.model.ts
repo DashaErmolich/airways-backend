@@ -44,4 +44,8 @@ export class Flight {
     description: 'Flight number',
   })
   flightNumber: string;
+
+  connectedFlights: Flight[];
+
+  layoverTime: number;
 }
